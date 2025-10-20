@@ -1,31 +1,29 @@
-# macOS System Files
-.DS_Store
-.AppleDouble
-.LSOverride
-Icon
-._*
-.DocumentRevisions-V100
-.fseventsd
-.Spotlight-V100
-.TemporaryItems
-.Trashes
-.VolumeIcon.icns
-.com.apple.timemachine.donotpresent
-.AppleDB
-.AppleDesktop
-Network Trash Folder
-Temporary Items
-.apdisk
+# This branch is for GitHub Pages only - ignore all Swift app code
 
-# Swift Package Manager
-/.build
-/Packages
+# Swift source code and build artifacts
+/Sources/
+/Tests/
+Package.swift
+/.build/
+/Packages/
 /*.xcodeproj
 xcuserdata/
 DerivedData/
 .swiftpm/
 
-# Xcode
+# Application bundles
+*.app
+UniFi LED Controller.app/
+UniGlo.app/
+
+# App icons and assets (for app)
+AppIcon.icns
+AppIcon.iconset/
+
+# Build scripts
+build_app.sh
+
+# Xcode files
 build/
 *.pbxuser
 !default.pbxuser
@@ -41,9 +39,7 @@ build/
 *.xcscmblueprint
 *.xcworkspace
 !default.xcworkspace
-
-# Built application
-*.app
+UniGlo.code-workspace
 
 # Temporary files
 *.tmp
@@ -65,10 +61,29 @@ cookies.txt
 lcov.info
 coverage/
 
-# Node.js
+# Node.js (for local development server)
 node_modules/
 screenshot-*.png
 
 # Misc
 *.dSYM.zip
 *.dSYM
+
+# macOS System Files
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
