@@ -100,6 +100,7 @@
         justify-content: center;
         transition: all 0.2s ease;
         box-shadow: var(--shadow);
+        position: relative;
       }
 
       .theme-toggle:hover {
@@ -111,6 +112,56 @@
         width: 20px;
         height: 20px;
         color: var(--text-primary);
+      }
+
+      .theme-tooltip {
+        position: absolute;
+        right: 100%;
+        margin-right: 0.75rem;
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 0.375rem;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--text-primary);
+        white-space: nowrap;
+        box-shadow: var(--shadow-lg);
+        pointer-events: none;
+        opacity: 0;
+        transform: translateX(10px);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+      }
+
+      .theme-tooltip.show {
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      .theme-tooltip::after {
+        content: "";
+        position: absolute;
+        right: -6px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 0;
+        height: 0;
+        border-left: 6px solid var(--card-bg);
+        border-top: 6px solid transparent;
+        border-bottom: 6px solid transparent;
+      }
+
+      .theme-tooltip::before {
+        content: "";
+        position: absolute;
+        right: -7px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 0;
+        height: 0;
+        border-left: 7px solid var(--card-border);
+        border-top: 7px solid transparent;
+        border-bottom: 7px solid transparent;
       }
 
       /* Hero Section */
@@ -547,6 +598,7 @@
             id="themeToggle"
             aria-label="Toggle theme"
           >
+            <span class="theme-tooltip" id="themeTooltip"></span>
             <svg
               class="sun-icon"
               fill="none"
@@ -572,6 +624,20 @@
                 stroke-linejoin="round"
                 stroke-width="2"
                 d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+              />
+            </svg>
+            <svg
+              class="system-icon"
+              style="display: none"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
               />
             </svg>
           </button>
@@ -797,10 +863,10 @@
                   />
                 </svg>
               </div>
-              <h3>Temporary Overrides</h3>
+              <h3>Manual Overrides</h3>
               <p>
-                Quickly override schedules for a set duration. Perfect for those
-                times when you need LEDs on or off temporarily.
+                Quickly override schedules if needed. Perfect for those moments
+                when you need LEDs on or off temporarily.
               </p>
             </div>
 
@@ -860,51 +926,119 @@
     <script>
       // Theme management
       const themeToggle = document.getElementById("themeToggle");
+      const themeTooltip = document.getElementById("themeTooltip");
       const sunIcon = document.querySelector(".sun-icon");
       const moonIcon = document.querySelector(".moon-icon");
+      const systemIcon = document.querySelector(".system-icon");
       const html = document.documentElement;
 
-      // Check for saved theme preference or default to system preference
-      const getPreferredTheme = () => {
-        const savedTheme = localStorage.getItem("theme");
-        if (savedTheme) {
-          return savedTheme;
-        }
+      let tooltipTimeout;
+
+      // Get system theme preference
+      const getSystemTheme = () => {
         return window.matchMedia("(prefers-color-scheme: dark)").matches
           ? "dark"
           : "light";
       };
 
-      // Set theme
-      const setTheme = (theme) => {
-        html.setAttribute("data-theme", theme);
-        localStorage.setItem("theme", theme);
+      // Get tooltip text for mode
+      const getTooltipText = (mode) => {
+        const texts = {
+          system: "System",
+          light: "Light",
+          dark: "Dark",
+        };
+        return texts[mode] || mode;
+      };
 
-        if (theme === "dark") {
-          sunIcon.style.display = "none";
-          moonIcon.style.display = "block";
+      // Show tooltip
+      const showTooltip = (mode) => {
+        clearTimeout(tooltipTimeout);
+        themeTooltip.textContent = getTooltipText(mode);
+        themeTooltip.classList.add("show");
+
+        tooltipTimeout = setTimeout(() => {
+          themeTooltip.classList.remove("show");
+        }, 1500);
+      };
+
+      // Update icon display based on theme mode
+      const updateIcon = (mode) => {
+        sunIcon.style.display = mode === "light" ? "block" : "none";
+        moonIcon.style.display = mode === "dark" ? "block" : "none";
+        systemIcon.style.display = mode === "system" ? "block" : "none";
+      };
+
+      // Apply theme to the page
+      const applyTheme = (actualTheme) => {
+        html.setAttribute("data-theme", actualTheme);
+      };
+
+      // Set theme mode (system, light, or dark)
+      const setThemeMode = (mode, showTooltipFlag = false) => {
+        if (mode === "system") {
+          localStorage.removeItem("theme");
+          applyTheme(getSystemTheme());
         } else {
-          sunIcon.style.display = "block";
-          moonIcon.style.display = "none";
+          localStorage.setItem("theme", mode);
+          applyTheme(mode);
+        }
+        updateIcon(mode);
+
+        if (showTooltipFlag) {
+          showTooltip(mode);
         }
       };
 
-      // Initialize theme
-      setTheme(getPreferredTheme());
+      // Get current theme mode
+      const getCurrentMode = () => {
+        const savedTheme = localStorage.getItem("theme");
+        return savedTheme || "system";
+      };
 
-      // Toggle theme
+      // Initialize theme
+      const initialMode = getCurrentMode();
+      setThemeMode(initialMode, false);
+
+      // Toggle theme: system → light → dark → system
       themeToggle.addEventListener("click", () => {
-        const currentTheme = html.getAttribute("data-theme");
-        const newTheme = currentTheme === "dark" ? "light" : "dark";
-        setTheme(newTheme);
+        const currentMode = getCurrentMode();
+        let nextMode;
+
+        if (currentMode === "system") {
+          nextMode = "light";
+        } else if (currentMode === "light") {
+          nextMode = "dark";
+        } else {
+          nextMode = "system";
+        }
+
+        setThemeMode(nextMode, true);
+      });
+
+      // Show tooltip on hover
+      themeToggle.addEventListener("mouseenter", () => {
+        clearTimeout(tooltipTimeout);
+        const currentMode = getCurrentMode();
+        themeTooltip.textContent = getTooltipText(currentMode);
+        themeTooltip.classList.add("show");
+      });
+
+      // Hide tooltip on mouse leave
+      themeToggle.addEventListener("mouseleave", () => {
+        clearTimeout(tooltipTimeout);
+        tooltipTimeout = setTimeout(() => {
+          themeTooltip.classList.remove("show");
+        }, 200);
       });
 
       // Listen for system theme changes
       window
         .matchMedia("(prefers-color-scheme: dark)")
         .addEventListener("change", (e) => {
-          if (!localStorage.getItem("theme")) {
-            setTheme(e.matches ? "dark" : "light");
+          // Only update if in system mode
+          if (getCurrentMode() === "system") {
+            applyTheme(e.matches ? "dark" : "light");
           }
         });
 
