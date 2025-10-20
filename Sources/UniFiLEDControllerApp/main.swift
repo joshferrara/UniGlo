@@ -11,13 +11,16 @@ struct UniFiLEDControllerApp: App {
     }
 
     var body: some Scene {
-        WindowGroup("UniFi LED Controller") {
+        WindowGroup("UniGlo") {
             MainView()
                 .frame(minWidth: 900, minHeight: 600)
                 .environmentObject(appState)
                 .task {
                     // Load persisted settings when app starts
                     await appState.loadPersistedState()
+
+                    // Configure scheduler with appState
+                    await appState.scheduler.configure(with: appState)
 
                     // Auto-refresh devices if we have valid configuration
                     if appState.controllerConfig.baseURL != nil && !appState.controllerConfig.username.isEmpty {

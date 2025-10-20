@@ -75,10 +75,10 @@ struct Schedule: Codable, Identifiable {
     let id: UUID
     var name: String
     var enabled: Bool
-    var assignments: [UUID]
+    var assignments: [String]  // MAC addresses of assigned devices
     var rules: [ScheduleRule]
 
-    init(id: UUID = UUID(), name: String, enabled: Bool = true, assignments: [UUID] = [], rules: [ScheduleRule] = []) {
+    init(id: UUID = UUID(), name: String, enabled: Bool = true, assignments: [String] = [], rules: [ScheduleRule] = []) {
         self.id = id
         self.name = name
         self.enabled = enabled
