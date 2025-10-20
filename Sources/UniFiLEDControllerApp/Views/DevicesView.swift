@@ -80,7 +80,7 @@ struct DevicesView: View {
 
     private func update(device: AccessPoint, ledEnabled: Bool) async {
         do {
-            try await appState.controllerClient.toggleLED(config: appState.controllerConfig, enable: ledEnabled)
+            try await appState.controllerClient.toggleDeviceLED(config: appState.controllerConfig, deviceId: device.deviceId, enable: ledEnabled)
             await appState.refreshDevices()
         } catch {
             print("Failed to toggle LED for \(device.name): \(error)")

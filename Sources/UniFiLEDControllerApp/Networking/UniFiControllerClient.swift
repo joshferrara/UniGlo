@@ -304,6 +304,82 @@ actor UniFiControllerClient {
         throw lastError ?? UniFiControllerError.requestFailed
     }
 
+    func toggleDeviceLED(config: ControllerConfig, deviceId: String, enable: Bool) async throws {
+        guard let baseURL = config.baseURL else { return }
+
+        // Ensure we're logged in first
+        try await ensureAuthenticated(config: config)
+
+        // Try newer API path first, then fall back to legacy
+        let devicePaths = [
+            "/proxy/network/api/s/\(config.site)/rest/device/\(deviceId)",
+            "/api/s/\(config.site)/rest/device/\(deviceId)"
+        ]
+
+        var lastError: Error?
+
+        for path in devicePaths {
+            var request = URLRequest(url: baseURL.appendingPathComponent(path))
+            request.httpMethod = "PUT"
+            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONEncoder().encode(["led_override": enable ? "on" : "off"])
+
+            Logger.network.info("Toggling LED for device \(deviceId) to \(enable ? "on" : "off")")
+
+            // Add cookies from authentication
+            if let cookies = cookiesByConfig[configKey(config)] {
+                let cookieHeaders = HTTPCookie.requestHeaderFields(with: cookies)
+                for (key, value) in cookieHeaders {
+                    request.addValue(value, forHTTPHeaderField: key)
+                }
+            }
+
+            // Add CSRF token if we have one
+            if let csrfToken = csrfTokensByConfig[configKey(config)] {
+                request.addValue(csrfToken, forHTTPHeaderField: "X-Csrf-Token")
+            }
+
+            do {
+                let (data, response) = try await session(for: config).data(for: request)
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    lastError = UniFiControllerError.requestFailed
+                    continue
+                }
+
+                Logger.network.info("Device LED toggle response status: \(httpResponse.statusCode)")
+
+                // If 404, try next path
+                if httpResponse.statusCode == 404 {
+                    continue
+                }
+
+                // If 401, clear cookies and retry once
+                if httpResponse.statusCode == 401 {
+                    cookiesByConfig[configKey(config)] = nil
+                    csrfTokensByConfig[configKey(config)] = nil
+                    return try await toggleDeviceLED(config: config, deviceId: deviceId, enable: enable)
+                }
+
+                if !(200..<300).contains(httpResponse.statusCode) {
+                    if let dataString = String(data: data, encoding: .utf8) {
+                        Logger.network.error("Device LED toggle failed. Response: \(dataString)")
+                    }
+                    lastError = UniFiControllerError.requestFailed
+                    continue
+                }
+
+                // Success!
+                Logger.network.info("Successfully toggled LED for device \(deviceId)")
+                return
+            } catch {
+                Logger.network.error("Error toggling device LED: \(error.localizedDescription)")
+                lastError = error
+            }
+        }
+
+        throw lastError ?? UniFiControllerError.requestFailed
+    }
+
     private func session(for config: ControllerConfig) -> URLSession {
         config.acceptInvalidCertificates ? insecureSession : defaultSession
     }
@@ -354,7 +430,13 @@ actor UniFiControllerClient {
                 return nil
             }
 
+            // Require device ID for API calls
+            guard let deviceId = _id else {
+                return nil
+            }
+
             return AccessPoint(
+                deviceId: deviceId,
                 name: name ?? model ?? mac,
                 ipAddress: ip ?? "",
                 macAddress: mac,
