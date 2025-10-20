@@ -65,6 +65,9 @@ cookies.txt
 lcov.info
 coverage/
 
+# Documentation
+/docs
+
 # Misc
 *.dSYM.zip
 *.dSYM

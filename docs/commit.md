@@ -1,1 +1,0 @@
-Stage and commit all modified and new files in the repository. Generate a clear and descriptive commit message that summarizes the purpose of the changes (e.g., referencing the feature added, bug fixed, or files affected). Use conventional commit style if possible (e.g., feat: ..., fix: ..., chore: ...).
