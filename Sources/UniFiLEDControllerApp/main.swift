@@ -15,6 +15,15 @@ struct UniFiLEDControllerApp: App {
             MainView()
                 .frame(minWidth: 900, minHeight: 600)
                 .environmentObject(appState)
+                .task {
+                    // Load persisted settings when app starts
+                    await appState.loadPersistedState()
+
+                    // Auto-refresh devices if we have valid configuration
+                    if appState.controllerConfig.baseURL != nil && !appState.controllerConfig.username.isEmpty {
+                        await appState.refreshDevices()
+                    }
+                }
                 .onAppear {
                     // Ensure window is key and accepts input
                     NSApp.activate(ignoringOtherApps: true)
