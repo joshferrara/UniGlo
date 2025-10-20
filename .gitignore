@@ -65,6 +65,10 @@ cookies.txt
 lcov.info
 coverage/
 
+# Node.js
+node_modules/
+screenshot-*.png
+
 # Misc
 *.dSYM.zip
 *.dSYM
