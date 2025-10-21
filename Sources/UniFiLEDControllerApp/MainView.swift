@@ -1,33 +1,23 @@
 import SwiftUI
 
 struct MainView: View {
-    @State private var selection: Tab = .devices
-
     var body: some View {
-        TabView(selection: $selection) {
+        TabView {
             DevicesView()
                 .tabItem {
-                    Label("Devices", systemImage: "wifi")
+                    Text("Devices")
                 }
-                .tag(Tab.devices)
 
             SchedulesView()
                 .tabItem {
-                    Label("Schedules", systemImage: "calendar")
+                    Text("Schedules")
                 }
-                .tag(Tab.schedules)
 
             SettingsView()
                 .tabItem {
-                    Label("Settings", systemImage: "gearshape")
+                    Text("Settings")
                 }
-                .tag(Tab.settings)
         }
-    }
-
-    private enum Tab {
-        case devices
-        case schedules
-        case settings
+        .tint(Color.unigloBlue)
     }
 }

@@ -119,7 +119,7 @@ struct ScheduleRow: View {
             // Schedule icon
             Image(systemName: schedule.enabled ? "calendar.badge.checkmark" : "calendar")
                 .font(.title3)
-                .foregroundStyle(schedule.enabled ? .blue : .secondary)
+                .foregroundStyle(schedule.enabled ? Color.unigloBlue : .secondary)
                 .frame(width: 32)
 
             // Schedule info
@@ -147,6 +147,7 @@ struct ScheduleRow: View {
                     .font(.caption)
             }
             .toggleStyle(.switch)
+            .tint(Color.unigloBlue)
             .controlSize(.small)
             .onTapGesture {} // Prevent click-through to row
 
@@ -213,6 +214,7 @@ struct ScheduleEditor: View {
                 // Enabled toggle
                 Toggle("Enabled", isOn: $schedule.enabled)
                     .toggleStyle(.switch)
+                    .tint(Color.unigloBlue)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
@@ -438,6 +440,7 @@ struct ScheduleEditor: View {
                 }
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.borderedProminent)
+                .tint(Color.unigloBlue)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 16)

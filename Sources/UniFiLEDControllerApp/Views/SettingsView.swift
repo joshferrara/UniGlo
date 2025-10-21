@@ -31,7 +31,7 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
                             Image(systemName: "info.circle.fill")
-                                .foregroundStyle(.blue)
+                                .foregroundStyle(Color.unigloBlue)
                             Text("Getting Started")
                                 .font(.headline)
                                 .foregroundColor(.primary)
@@ -136,7 +136,7 @@ struct SettingsView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
                             Image(systemName: "person.badge.key.fill")
-                                .foregroundStyle(.blue)
+                                .foregroundStyle(Color.unigloBlue)
                             Text("Credentials")
                                 .font(.headline)
                                 .foregroundColor(.primary)
@@ -214,6 +214,7 @@ struct SettingsView: View {
                             Spacer()
                             Toggle("", isOn: $configDraft.acceptInvalidCertificates)
                                 .labelsHidden()
+                                .tint(Color.unigloBlue)
                         }
                     }
                     .padding(16)
@@ -246,6 +247,7 @@ struct SettingsView: View {
                     persist()
                 }
                 .buttonStyle(.borderedProminent)
+                .tint(Color.unigloBlue)
                 .disabled(isPersisting || baseURLText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || configDraft.username.isEmpty || configDraft.password.isEmpty)
             }
             .padding(.horizontal, 20)

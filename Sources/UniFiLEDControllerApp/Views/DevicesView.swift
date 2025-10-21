@@ -154,6 +154,7 @@ struct DeviceRow: View {
                     .font(.caption)
             }
             .toggleStyle(.switch)
+            .tint(Color.unigloBlue)
             .disabled(!device.isOnline)
             .controlSize(.small)
         }
