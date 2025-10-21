@@ -4,6 +4,7 @@
 /Sources/
 /Tests/
 Package.swift
+Package.resolved
 /.build/
 /Packages/
 /*.xcodeproj
@@ -50,6 +51,7 @@ cookies.txt
 # IDE files
 .vscode/
 .idea/
+.claude/
 *.swp
 *.swo
 *~

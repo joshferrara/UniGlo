@@ -17,8 +17,8 @@
         --text-primary: #0a0a0a;
         --text-secondary: #6b7280;
         --border-color: #e5e7eb;
-        --glow-blue: #3b82f6;
-        --glow-blue-light: rgba(59, 130, 246, 0.2);
+        --glow-blue: #0db4fe;
+        --glow-blue-light: rgba(13, 180, 254, 0.2);
         --card-bg: #ffffff;
         --card-border: #e5e7eb;
         --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
@@ -31,8 +31,8 @@
         --text-primary: #fafafa;
         --text-secondary: #9ca3af;
         --border-color: #2a2a2a;
-        --glow-blue: #60a5fa;
-        --glow-blue-light: rgba(96, 165, 250, 0.15);
+        --glow-blue: #0db4fe;
+        --glow-blue-light: rgba(13, 180, 254, 0.15);
         --card-bg: #141414;
         --card-border: #2a2a2a;
         --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3);
@@ -445,12 +445,17 @@
         display: flex;
         transition: transform 0.5s ease-in-out;
         height: 100%;
+        width: 100%;
       }
 
       .carousel-slide {
         min-width: 100%;
+        width: 100%;
         flex-shrink: 0;
         height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
 
       .carousel-image {
@@ -458,6 +463,7 @@
         height: 100%;
         display: block;
         object-fit: contain;
+        object-position: center;
         background: var(--card-bg);
       }
 
@@ -529,6 +535,33 @@
         border-color: var(--glow-blue);
       }
 
+      /* CTA Section */
+      .cta-section {
+        padding: 6rem 0;
+        background: var(--bg-primary);
+        border-top: 1px solid var(--border-color);
+        text-align: center;
+      }
+
+      .cta-content {
+        max-width: 700px;
+        margin: 0 auto;
+      }
+
+      .cta-section h2 {
+        font-size: 2.5rem;
+        font-weight: 300;
+        letter-spacing: -0.02em;
+        margin-bottom: 1rem;
+      }
+
+      .cta-section p {
+        font-size: 1.25rem;
+        color: var(--text-secondary);
+        margin-bottom: 2.5rem;
+        line-height: 1.6;
+      }
+
       /* Footer */
       footer {
         padding: 3rem 0;
@@ -536,6 +569,11 @@
         text-align: center;
         color: var(--text-secondary);
         font-size: 0.875rem;
+        background: var(--bg-secondary);
+      }
+
+      [data-theme="dark"] footer {
+        background: #0f0f0f;
       }
 
       footer a {
@@ -563,6 +601,31 @@
 
         .hero {
           padding: 4rem 0;
+        }
+
+        .cta-section h2 {
+          font-size: 2rem;
+        }
+
+        .cta-section p {
+          font-size: 1.125rem;
+        }
+
+        .carousel {
+          overflow: hidden;
+        }
+
+        .carousel-container {
+          border-radius: 0.5rem;
+        }
+
+        .carousel-slide {
+          overflow: hidden;
+        }
+
+        .carousel-image {
+          max-width: 100%;
+          height: auto;
         }
 
         .carousel-btn-prev {
@@ -729,21 +792,21 @@
               <div class="carousel-track">
                 <div class="carousel-slide active">
                   <img
-                    src="images/carousel-01.jpg"
+                    src="images/carousel-01.png"
                     alt="UniGlo Schedule Management Interface"
                     class="carousel-image"
                   />
                 </div>
                 <div class="carousel-slide">
                   <img
-                    src="images/carousel-02.jpg"
+                    src="images/carousel-02.png"
                     alt="UniGlo Device Management"
                     class="carousel-image"
                   />
                 </div>
                 <div class="carousel-slide">
                   <img
-                    src="images/carousel-03.jpg"
+                    src="images/carousel-03.png"
                     alt="UniGlo Menu Bar Interface"
                     class="carousel-image"
                   />
@@ -905,6 +968,34 @@
                 to all controls and schedules.
               </p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="cta-section">
+        <div class="container">
+          <div class="cta-content">
+            <h2>Ready to Take Control of Your AP LEDs?</h2>
+            <p>
+              Download UniGlo for macOS and start scheduling your UniFi Access Point LEDs today. Free and open source.
+            </p>
+            <a href="#download" class="btn btn-primary">
+              <svg
+                width="20"
+                height="20"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                />
+              </svg>
+              Download for macOS
+            </a>
           </div>
         </div>
       </section>
@@ -1076,6 +1167,42 @@
             if (e.key === "ArrowLeft") this.prev();
             if (e.key === "ArrowRight") this.next();
           });
+
+          // Touch/swipe support
+          let touchStartX = 0;
+          let touchEndX = 0;
+          let touchStartY = 0;
+          let touchEndY = 0;
+
+          const handleSwipe = () => {
+            const swipeThreshold = 50;
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = Math.abs(touchEndY - touchStartY);
+
+            // Only process horizontal swipes (ignore vertical scrolling)
+            if (deltaY > 30) return;
+
+            if (deltaX > swipeThreshold) {
+              // Swipe right
+              this.prev();
+              clearInterval(this.autoPlay);
+            } else if (deltaX < -swipeThreshold) {
+              // Swipe left
+              this.next();
+              clearInterval(this.autoPlay);
+            }
+          };
+
+          this.track.addEventListener('touchstart', (e) => {
+            touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
+          }, { passive: true });
+
+          this.track.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
+            handleSwipe();
+          }, { passive: true });
         },
 
         goToSlide(index) {
