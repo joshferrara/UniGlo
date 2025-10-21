@@ -5,50 +5,70 @@ struct DevicesView: View {
     @State private var isRefreshing = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
             HStack {
                 Text("Access Points")
                     .font(.title2)
+                    .fontWeight(.semibold)
+
                 Spacer()
-                Button {
-                    refresh()
-                } label: {
-                    if isRefreshing {
-                        ProgressView()
-                    } else {
-                        Label("Refresh", systemImage: "arrow.clockwise")
+
+                HStack(spacing: 8) {
+                    Button {
+                        Task { await toggleAll(false) }
+                    } label: {
+                        Label("All Off", systemImage: "lightbulb.slash")
+                            .font(.callout)
                     }
-                }
-                .buttonStyle(.bordered)
-                Button("Turn Off All LEDs") {
-                    Task { await toggleAll(false) }
-                }
-                Button("Turn On All LEDs") {
-                    Task { await toggleAll(true) }
+                    .buttonStyle(.bordered)
+                    .help("Turn off all LEDs")
+
+                    Button {
+                        Task { await toggleAll(true) }
+                    } label: {
+                        Label("All On", systemImage: "lightbulb")
+                            .font(.callout)
+                    }
+                    .buttonStyle(.bordered)
+                    .help("Turn on all LEDs")
+
+                    Button {
+                        refresh()
+                    } label: {
+                        if isRefreshing {
+                            ProgressView()
+                                .controlSize(.small)
+                                .frame(width: 14, height: 14)
+                        } else {
+                            Label("Refresh", systemImage: "arrow.clockwise")
+                                .font(.callout)
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .help("Refresh devices")
                 }
             }
-            List(appState.devices) { device in
-                HStack(spacing: 16) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(device.name)
-                            .font(.headline)
-                        Text(device.ipAddress)
-                            .font(.footnote)
-                            .foregroundColor(.secondary)
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 12)
+
+            Divider()
+
+            // Device List
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(appState.devices) { device in
+                        DeviceRow(device: device, binding: binding(for: device))
+
+                        if device.id != appState.devices.last?.id {
+                            Divider()
+                                .padding(.leading, 20)
+                        }
                     }
-                    Spacer()
-                    Label(device.isOnline ? "Online" : "Offline", systemImage: device.isOnline ? "checkmark.circle.fill" : "xmark.circle.fill")
-                        .foregroundStyle(device.isOnline ? .green : .red)
-                    Toggle(isOn: binding(for: device)) {
-                        Text("LED")
-                    }
-                    .toggleStyle(.switch)
-                    .disabled(!device.isOnline)
                 }
-                .padding(.vertical, 4)
             }
         }
-        .padding()
     }
 
     private func refresh() {
@@ -85,5 +105,60 @@ struct DevicesView: View {
         } catch {
             print("Failed to toggle LED for \(device.name): \(error)")
         }
+    }
+}
+
+struct DeviceRow: View {
+    let device: AccessPoint
+    let binding: Binding<Bool>
+
+    var body: some View {
+        HStack(spacing: 16) {
+            // Device icon
+            Image(systemName: "wifi.router")
+                .font(.title3)
+                .foregroundStyle(.secondary)
+                .frame(width: 32)
+
+            // Device info
+            VStack(alignment: .leading, spacing: 3) {
+                Text(device.name)
+                    .font(.system(.body, design: .default))
+                    .fontWeight(.medium)
+                Text(device.ipAddress)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            // Status indicator
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(device.isOnline ? Color.green : Color.red)
+                    .frame(width: 6, height: 6)
+                Text(device.isOnline ? "Online" : "Offline")
+                    .font(.caption)
+                    .foregroundStyle(device.isOnline ? .green : .red)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(device.isOnline ? Color.green.opacity(0.1) : Color.red.opacity(0.1))
+            )
+
+            // LED toggle
+            Toggle(isOn: binding) {
+                Text("LED")
+                    .font(.caption)
+            }
+            .toggleStyle(.switch)
+            .disabled(!device.isOnline)
+            .controlSize(.small)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
     }
 }
