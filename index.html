@@ -612,20 +612,29 @@
         }
 
         .carousel {
-          overflow: hidden;
+          overflow: visible;
         }
 
         .carousel-container {
           border-radius: 0.5rem;
+          /* Remove fixed aspect ratio on mobile to prevent clipping */
+          aspect-ratio: auto;
+          height: auto;
+        }
+
+        .carousel-track {
+          height: auto;
         }
 
         .carousel-slide {
-          overflow: hidden;
+          overflow: visible;
+          height: auto;
         }
 
         .carousel-image {
-          max-width: 100%;
+          width: 100%;
           height: auto;
+          object-fit: contain;
         }
 
         .carousel-btn-prev {
