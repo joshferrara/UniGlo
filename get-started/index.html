@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Get Started - UniGlo</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      :root {
+        --bg-primary: #ffffff;
+        --bg-secondary: #f8f9fa;
+        --text-primary: #0a0a0a;
+        --text-secondary: #6b7280;
+        --border-color: #e5e7eb;
+        --glow-blue: #0db4fe;
+        --glow-blue-light: rgba(13, 180, 254, 0.2);
+        --card-bg: #ffffff;
+        --card-border: #e5e7eb;
+        --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+        --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+      }
+
+      [data-theme="dark"] {
+        --bg-primary: #0a0a0a;
+        --bg-secondary: #1a1a1a;
+        --text-primary: #fafafa;
+        --text-secondary: #9ca3af;
+        --border-color: #2a2a2a;
+        --glow-blue: #0db4fe;
+        --glow-blue-light: rgba(13, 180, 254, 0.15);
+        --card-bg: #141414;
+        --card-border: #2a2a2a;
+        --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.3);
+        --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5);
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
+          Roboto, "Helvetica Neue", Arial, sans-serif;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        line-height: 1.6;
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 1.5rem;
+      }
+
+      .content-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 0 1.5rem;
+      }
+
+      /* Header */
+      header {
+        padding: 1.5rem 0;
+        border-bottom: 1px solid var(--border-color);
+        position: sticky;
+        top: 0;
+        background: var(--bg-primary);
+        backdrop-filter: blur(10px);
+        z-index: 100;
+      }
+
+      .header-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        text-decoration: none;
+      }
+
+      .logo img {
+        width: 32px;
+        height: 32px;
+        filter: drop-shadow(0 0 8px var(--glow-blue-light));
+        border-radius: 8px;
+      }
+
+      /* Theme Toggle */
+      .theme-toggle {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 9999px;
+        padding: 0.5rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        box-shadow: var(--shadow);
+        position: relative;
+      }
+
+      .theme-toggle:hover {
+        background: var(--bg-secondary);
+        box-shadow: 0 0 12px var(--glow-blue-light);
+      }
+
+      .theme-toggle svg {
+        width: 20px;
+        height: 20px;
+        color: var(--text-primary);
+      }
+
+      .theme-tooltip {
+        position: absolute;
+        right: 100%;
+        margin-right: 0.75rem;
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 0.375rem;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--text-primary);
+        white-space: nowrap;
+        box-shadow: var(--shadow-lg);
+        pointer-events: none;
+        opacity: 0;
+        transform: translateX(10px);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+      }
+
+      .theme-tooltip.show {
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      .theme-tooltip::after {
+        content: "";
+        position: absolute;
+        right: -6px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 0;
+        height: 0;
+        border-left: 6px solid var(--card-bg);
+        border-top: 6px solid transparent;
+        border-bottom: 6px solid transparent;
+      }
+
+      .theme-tooltip::before {
+        content: "";
+        position: absolute;
+        right: -7px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 0;
+        height: 0;
+        border-left: 7px solid var(--card-border);
+        border-top: 7px solid transparent;
+        border-bottom: 7px solid transparent;
+      }
+
+      /* Hero Section */
+      .hero {
+        padding: 4rem 0 3rem;
+        text-align: center;
+        background: var(--bg-primary);
+      }
+
+      .hero-icon {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 1.5rem;
+        filter: drop-shadow(0 0 24px var(--glow-blue-light));
+        border-radius: 24px;
+      }
+
+      h1 {
+        font-size: 3rem;
+        font-weight: 300;
+        letter-spacing: -0.03em;
+        margin-bottom: 1rem;
+        background: linear-gradient(
+          135deg,
+          var(--text-primary) 0%,
+          var(--text-secondary) 100%
+        );
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .hero-subtitle {
+        font-size: 1.25rem;
+        color: var(--text-secondary);
+        margin-bottom: 2rem;
+        font-weight: 300;
+      }
+
+      /* Content Section */
+      .content-section {
+        padding: 3rem 0 4rem;
+        background: var(--bg-primary);
+      }
+
+      /* Step Cards */
+      .steps {
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+      }
+
+      .step-card {
+        background: var(--card-bg);
+        border: 1px solid var(--card-border);
+        border-radius: 0.75rem;
+        padding: 2rem;
+        box-shadow: var(--shadow);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .step-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: linear-gradient(
+          180deg,
+          var(--glow-blue),
+          var(--glow-blue-light)
+        );
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .step-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+        border-color: var(--glow-blue);
+      }
+
+      .step-card:hover::before {
+        opacity: 1;
+      }
+
+      .step-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+      }
+
+      .step-number {
+        flex-shrink: 0;
+        width: 48px;
+        height: 48px;
+        background: var(--glow-blue-light);
+        border-radius: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--glow-blue);
+      }
+
+      .step-card h2 {
+        font-size: 1.5rem;
+        font-weight: 500;
+        letter-spacing: -0.01em;
+        margin: 0;
+      }
+
+      .step-content {
+        margin-left: 64px;
+      }
+
+      .step-content p {
+        color: var(--text-secondary);
+        font-size: 1rem;
+        line-height: 1.7;
+        margin-bottom: 1rem;
+      }
+
+      .step-content p:last-child {
+        margin-bottom: 0;
+      }
+
+      .step-content ol,
+      .step-content ul {
+        margin: 1rem 0;
+        padding-left: 1.5rem;
+        color: var(--text-secondary);
+      }
+
+      .step-content li {
+        margin: 0.5rem 0;
+        line-height: 1.7;
+      }
+
+      .step-content code {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 0.25rem;
+        padding: 0.125rem 0.375rem;
+        font-family: "SF Mono", Monaco, "Courier New", monospace;
+        font-size: 0.9em;
+        color: var(--glow-blue);
+      }
+
+      .step-content strong {
+        color: var(--text-primary);
+        font-weight: 600;
+      }
+
+      .info-box {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-color);
+        border-radius: 0.5rem;
+        padding: 1rem 1.25rem;
+        margin: 1rem 0;
+        display: flex;
+        gap: 0.75rem;
+        align-items: flex-start;
+      }
+
+      .info-box svg {
+        flex-shrink: 0;
+        width: 20px;
+        height: 20px;
+        color: var(--glow-blue);
+        margin-top: 0.125rem;
+      }
+
+      .info-box p {
+        margin: 0;
+        font-size: 0.9375rem;
+      }
+
+      /* CTA Section */
+      .cta-section {
+        padding: 4rem 0;
+        background: var(--bg-secondary);
+        border-top: 1px solid var(--border-color);
+        text-align: center;
+      }
+
+      .cta-content {
+        max-width: 700px;
+        margin: 0 auto;
+      }
+
+      .cta-section h2 {
+        font-size: 2rem;
+        font-weight: 300;
+        letter-spacing: -0.02em;
+        margin-bottom: 1rem;
+      }
+
+      .cta-section p {
+        font-size: 1.125rem;
+        color: var(--text-secondary);
+        margin-bottom: 2rem;
+        line-height: 1.6;
+      }
+
+      .btn {
+        padding: 0.875rem 2rem;
+        border-radius: 0.5rem;
+        font-weight: 500;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s ease;
+        border: none;
+        cursor: pointer;
+        font-size: 1rem;
+      }
+
+      .btn-primary {
+        background: var(--glow-blue);
+        color: white;
+        box-shadow: 0 0 20px var(--glow-blue-light), var(--shadow-lg);
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0 30px var(--glow-blue-light),
+          0 15px 25px -5px rgb(0 0 0 / 0.2);
+      }
+
+      .btn-secondary {
+        background: var(--card-bg);
+        color: var(--text-primary);
+        border: 1px solid var(--card-border);
+        box-shadow: var(--shadow);
+      }
+
+      .btn-secondary:hover {
+        background: var(--bg-secondary);
+        transform: translateY(-2px);
+      }
+
+      /* Footer */
+      footer {
+        padding: 3rem 0;
+        border-top: 1px solid var(--border-color);
+        text-align: center;
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        background: var(--bg-secondary);
+      }
+
+      [data-theme="dark"] footer {
+        background: #0f0f0f;
+      }
+
+      footer a {
+        color: var(--glow-blue);
+        text-decoration: none;
+      }
+
+      footer a:hover {
+        text-decoration: underline;
+      }
+
+      /* Responsive */
+      @media (max-width: 768px) {
+        h1 {
+          font-size: 2.25rem;
+        }
+
+        .hero-subtitle {
+          font-size: 1.125rem;
+        }
+
+        .hero {
+          padding: 3rem 0 2rem;
+        }
+
+        .step-content {
+          margin-left: 0;
+          margin-top: 1rem;
+        }
+
+        .step-header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .step-card h2 {
+          font-size: 1.25rem;
+        }
+
+        .cta-section h2 {
+          font-size: 1.75rem;
+        }
+
+        .cta-section p {
+          font-size: 1rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="container">
+        <div class="header-content">
+          <a href="../" class="logo">
+            <img src="../icon.png" alt="UniGlo Icon" />
+            <span>UniGlo</span>
+          </a>
+          <button
+            class="theme-toggle"
+            id="themeToggle"
+            aria-label="Toggle theme"
+          >
+            <span class="theme-tooltip" id="themeTooltip"></span>
+            <svg
+              class="sun-icon"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+              />
+            </svg>
+            <svg
+              class="moon-icon"
+              style="display: none"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+              />
+            </svg>
+            <svg
+              class="system-icon"
+              style="display: none"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="content-container">
+          <img src="../icon.png" alt="UniGlo" class="hero-icon" />
+          <h1>Get Started with UniGlo</h1>
+          <p class="hero-subtitle">
+            Follow these simple steps to connect UniGlo to your UniFi network
+            and start scheduling your AP LEDs.
+          </p>
+        </div>
+      </section>
+
+      <section class="content-section">
+        <div class="content-container">
+          <div class="steps">
+            <!-- Step 1 -->
+            <div class="step-card">
+              <div class="step-header">
+                <div class="step-number">1</div>
+                <h2>Create a Local UniFi User Account</h2>
+              </div>
+              <div class="step-content">
+                <p>
+                  UniGlo requires a local user account on your UniFi controller
+                  to manage your access point LEDs. Here's how to create one:
+                </p>
+                <ol>
+                  <li>
+                    Open your UniFi controller web interface (usually at
+                    <code>https://unifi.ui.com</code> or your local controller
+                    address)
+                  </li>
+                  <li>
+                    Navigate to <strong>Settings</strong> → <strong>System</strong> → <strong>Admins & Users</strong>
+                  </li>
+                  <li>Click <strong>Add Admin</strong></li>
+                  <li>
+                    Fill in the details:
+                    <ul>
+                      <li><strong>Name:</strong> Choose a name (e.g., "UniGlo")</li>
+                      <li><strong>Username:</strong> Create a username</li>
+                      <li><strong>Password:</strong> Set a secure password</li>
+                      <li>
+                        <strong>Role:</strong> Select <strong>Super Admin</strong> (required for
+                        LED control)
+                      </li>
+                    </ul>
+                  </li>
+                  <li>Click <strong>Add</strong> to create the account</li>
+                </ol>
+                <div class="info-box">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <p>
+                    <strong>Important:</strong> This must be a <strong>local account</strong>, not
+                    a cloud account (UI.com SSO). Local accounts are created
+                    directly in your controller settings.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="step-card">
+              <div class="step-header">
+                <div class="step-number">2</div>
+                <h2>Find Your Network IP Address</h2>
+              </div>
+              <div class="step-content">
+                <p>
+                  Next, you need to find the IP address of your UniFi
+                  controller. This is the address UniGlo will use to connect to
+                  your network.
+                </p>
+
+                <p><strong>For UniFi Dream Machine / Cloud Key:</strong></p>
+                <ol>
+                  <li>Open the UniFi web interface</li>
+                  <li>
+                    Look at the URL in your browser's address bar. The IP
+                    address is the part between <code>https://</code> and the
+                    port number
+                  </li>
+                  <li>
+                    Example: If the URL is
+                    <code>https://192.168.1.1:443</code>, your IP address is
+                    <code>192.168.1.1</code>
+                  </li>
+                </ol>
+
+                <p><strong>For UniFi Controller Software:</strong></p>
+                <ol>
+                  <li>The IP address is the computer running the controller</li>
+                  <li>
+                    If running on your Mac, you can use <code>localhost</code> or
+                    <code>127.0.0.1</code>
+                  </li>
+                  <li>
+                    If running on another computer, find that computer's IP in
+                    your network settings
+                  </li>
+                </ol>
+
+                <div class="info-box">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+                    />
+                  </svg>
+                  <p>
+                    <strong>Tip:</strong> Most home networks use IP addresses
+                    starting with <code>192.168.x.x</code> or <code>10.0.x.x</code>.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="step-card">
+              <div class="step-header">
+                <div class="step-number">3</div>
+                <h2>Find Your UniFi Site Name</h2>
+              </div>
+              <div class="step-content">
+                <p>
+                  The site name identifies which site on your controller you
+                  want to manage. Here's how to find it:
+                </p>
+                <ol>
+                  <li>Open your UniFi controller web interface</li>
+                  <li>
+                    Look at the URL in your browser when viewing your site:
+                    <ul>
+                      <li>
+                        The site name appears after <code>/site/</code> in the URL
+                      </li>
+                      <li>
+                        Example: <code>https://192.168.1.1/manage/site/default/dashboard</code>
+                      </li>
+                      <li>In this case, the site name is <code>default</code></li>
+                    </ul>
+                  </li>
+                  <li>
+                    If you haven't changed it, your site name is likely
+                    <code>default</code>
+                  </li>
+                </ol>
+
+                <div class="info-box">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <p>
+                    <strong>Multiple Sites:</strong> If you manage multiple
+                    sites on your controller, you can create separate
+                    configurations in UniGlo for each site.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 4 -->
+            <div class="step-card">
+              <div class="step-header">
+                <div class="step-number">4</div>
+                <h2>Configure UniGlo Settings</h2>
+              </div>
+              <div class="step-content">
+                <p>
+                  Now that you have all the information, let's configure UniGlo:
+                </p>
+                <ol>
+                  <li>
+                    Open UniGlo from your menu bar (the glowing icon at the top
+                    of your screen)
+                  </li>
+                  <li>Click <strong>Settings</strong> in the menu</li>
+                  <li>
+                    Enter your connection details:
+                    <ul>
+                      <li>
+                        <strong>Controller Address:</strong> Your IP address from Step
+                        2 (e.g., <code>192.168.1.1</code>)
+                      </li>
+                      <li>
+                        <strong>Port:</strong> Usually <code>443</code> for HTTPS or
+                        <code>8443</code> for some controllers
+                      </li>
+                      <li><strong>Site Name:</strong> Your site name from Step 3</li>
+                      <li>
+                        <strong>Username:</strong> The username you created in Step 1
+                      </li>
+                      <li>
+                        <strong>Password:</strong> The password you created in Step 1
+                      </li>
+                    </ul>
+                  </li>
+                  <li>Click <strong>Test Connection</strong> to verify your settings</li>
+                  <li>
+                    If successful, click <strong>Save</strong> to store your configuration
+                  </li>
+                </ol>
+
+                <div class="info-box">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                    />
+                  </svg>
+                  <p>
+                    <strong>Security Note:</strong> Your credentials are safely
+                    stored in macOS Keychain and never transmitted to any
+                    third-party servers. UniGlo connects directly to your local
+                    controller.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Step 5 -->
+            <div class="step-card">
+              <div class="step-header">
+                <div class="step-number">5</div>
+                <h2>Start Scheduling!</h2>
+              </div>
+              <div class="step-content">
+                <p>
+                  You're all set! Now you can start creating schedules for your
+                  access point LEDs:
+                </p>
+                <ul>
+                  <li>
+                    Click the <strong>Devices</strong> tab to see all your access points
+                  </li>
+                  <li>Create a new schedule with custom on/off times</li>
+                  <li>
+                    Set different schedules for weekdays and weekends if needed
+                  </li>
+                  <li>
+                    Use manual overrides when you need to temporarily change LED
+                    states
+                  </li>
+                </ul>
+                <p>
+                  UniGlo will automatically apply your schedules and keep your
+                  AP LEDs in sync with your preferences.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="cta-section">
+        <div class="container">
+          <div class="cta-content">
+            <h2>Need More Help?</h2>
+            <p>
+              Check out the project documentation on GitHub or open an issue if
+              you run into any problems.
+            </p>
+            <a
+              href="https://github.com/joshferrara/UniGlo"
+              class="btn btn-primary"
+            >
+              <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                <path
+                  d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"
+                />
+              </svg>
+              View Documentation
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="container">
+        <p>
+          © 2025 <a href="https://joshferrara.com">Josh Ferrara</a>. Built with
+          SwiftUI for macOS & UniFi users.
+        </p>
+        <p style="margin-top: 0.5rem">
+          <a href="https://github.com/joshferrara/UniGlo">UniGlo</a> is open
+          source software.
+        </p>
+      </div>
+    </footer>
+
+    <script>
+      // Theme management (same as homepage)
+      const themeToggle = document.getElementById("themeToggle");
+      const themeTooltip = document.getElementById("themeTooltip");
+      const sunIcon = document.querySelector(".sun-icon");
+      const moonIcon = document.querySelector(".moon-icon");
+      const systemIcon = document.querySelector(".system-icon");
+      const html = document.documentElement;
+
+      let tooltipTimeout;
+
+      // Get system theme preference
+      const getSystemTheme = () => {
+        return window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
+      };
+
+      // Get tooltip text for mode
+      const getTooltipText = (mode) => {
+        const texts = {
+          system: "System",
+          light: "Light",
+          dark: "Dark",
+        };
+        return texts[mode] || mode;
+      };
+
+      // Show tooltip
+      const showTooltip = (mode) => {
+        clearTimeout(tooltipTimeout);
+        themeTooltip.textContent = getTooltipText(mode);
+        themeTooltip.classList.add("show");
+
+        tooltipTimeout = setTimeout(() => {
+          themeTooltip.classList.remove("show");
+        }, 1500);
+      };
+
+      // Update icon display based on theme mode
+      const updateIcon = (mode) => {
+        sunIcon.style.display = mode === "light" ? "block" : "none";
+        moonIcon.style.display = mode === "dark" ? "block" : "none";
+        systemIcon.style.display = mode === "system" ? "block" : "none";
+      };
+
+      // Apply theme to the page
+      const applyTheme = (actualTheme) => {
+        html.setAttribute("data-theme", actualTheme);
+      };
+
+      // Set theme mode (system, light, or dark)
+      const setThemeMode = (mode, showTooltipFlag = false) => {
+        if (mode === "system") {
+          localStorage.removeItem("theme");
+          applyTheme(getSystemTheme());
+        } else {
+          localStorage.setItem("theme", mode);
+          applyTheme(mode);
+        }
+        updateIcon(mode);
+
+        if (showTooltipFlag) {
+          showTooltip(mode);
+        }
+      };
+
+      // Get current theme mode
+      const getCurrentMode = () => {
+        const savedTheme = localStorage.getItem("theme");
+        return savedTheme || "system";
+      };
+
+      // Initialize theme
+      const initialMode = getCurrentMode();
+      setThemeMode(initialMode, false);
+
+      // Toggle theme: system → light → dark → system
+      themeToggle.addEventListener("click", () => {
+        const currentMode = getCurrentMode();
+        let nextMode;
+
+        if (currentMode === "system") {
+          nextMode = "light";
+        } else if (currentMode === "light") {
+          nextMode = "dark";
+        } else {
+          nextMode = "system";
+        }
+
+        setThemeMode(nextMode, true);
+      });
+
+      // Show tooltip on hover
+      themeToggle.addEventListener("mouseenter", () => {
+        clearTimeout(tooltipTimeout);
+        const currentMode = getCurrentMode();
+        themeTooltip.textContent = getTooltipText(currentMode);
+        themeTooltip.classList.add("show");
+      });
+
+      // Hide tooltip on mouse leave
+      themeToggle.addEventListener("mouseleave", () => {
+        clearTimeout(tooltipTimeout);
+        tooltipTimeout = setTimeout(() => {
+          themeTooltip.classList.remove("show");
+        }, 200);
+      });
+
+      // Listen for system theme changes
+      window
+        .matchMedia("(prefers-color-scheme: dark)")
+        .addEventListener("change", (e) => {
+          // Only update if in system mode
+          if (getCurrentMode() === "system") {
+            applyTheme(e.matches ? "dark" : "light");
+          }
+        });
+    </script>
+  </body>
+</html>
