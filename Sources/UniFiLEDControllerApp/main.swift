@@ -1,9 +1,15 @@
 import SwiftUI
 
+private enum AppSceneID {
+    static let mainWindow = "main-window"
+}
+
 @main
 struct UniFiLEDControllerApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @Environment(\.openWindow) private var openWindow
     @StateObject private var appState = AppState()
+    @StateObject private var sparkleUpdater = SparkleUpdater()
 
     init() {
         // Ensure the app can become active
@@ -11,16 +17,19 @@ struct UniFiLEDControllerApp: App {
     }
 
     var body: some Scene {
-        WindowGroup("UniGlo") {
+        let _ = configureReopenHandler()
+
+        WindowGroup("UniGlo", id: AppSceneID.mainWindow) {
             MainView()
                 .frame(minWidth: 650, minHeight: 450)
                 .environmentObject(appState)
+                .environmentObject(sparkleUpdater)
                 .task {
                     // Load persisted settings when app starts
                     await appState.loadPersistedState()
 
                     // Configure scheduler with appState
-                    await appState.scheduler.configure(with: appState)
+                    appState.scheduler.configure(with: appState)
 
                     // Auto-refresh devices if we have valid configuration including password
                     if appState.controllerConfig.baseURL != nil &&
@@ -43,6 +52,7 @@ struct UniFiLEDControllerApp: App {
                             await appState.refreshDevices()
                         }
                     }
+
                 }
                 .onAppear {
                     // Ensure window is key and accepts input
@@ -55,12 +65,25 @@ struct UniFiLEDControllerApp: App {
         .defaultSize(CGSize(width: 700, height: 500))
         .commands {
             CommandGroup(replacing: .appInfo) { }
+            CommandMenu("Updates") {
+                Button("Check for Updates…") {
+                    sparkleUpdater.checkForUpdates(nil)
+                }
+                .keyboardShortcut("U", modifiers: [.command, .option])
+            }
         }
 
         Settings {
             SettingsView()
                 .environmentObject(appState)
+                .environmentObject(sparkleUpdater)
                 .frame(width: 500, height: 400)
+        }
+    }
+
+    private func configureReopenHandler() {
+        appDelegate.reopenMainWindow = {
+            openWindow(id: AppSceneID.mainWindow)
         }
     }
 }

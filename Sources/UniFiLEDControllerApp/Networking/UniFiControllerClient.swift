@@ -4,6 +4,9 @@ import OSLog
 enum UniFiControllerError: Error {
     case invalidConfiguration
     case authenticationFailed
+    case ledControlUnsupported
+    case ledStateVerificationFailed
+    case rateLimited
     case requestFailed
 }
 
@@ -12,6 +15,21 @@ actor UniFiControllerClient {
     private let insecureSession: URLSession
     private var cookiesByConfig: [String: [HTTPCookie]] = [:]
     private var csrfTokensByConfig: [String: String] = [:]
+    private let ledUpdateFields = [
+        "name",
+        "snmp_contact",
+        "snmp_location",
+        "mgmt_network_id",
+        "afc_enabled",
+        "outdoor_mode_override",
+        "led_override",
+        "led_override_color",
+        "led_override_color_brightness",
+        "atf_enabled",
+        "config_network",
+        "mesh_sta_vap_enabled",
+        "radio_table"
+    ]
 
     init() {
         let configuration = URLSessionConfiguration.ephemeral  // Use ephemeral to avoid caching
@@ -30,9 +48,13 @@ actor UniFiControllerClient {
     }
 
     func fetchDevices(config: ControllerConfig) async throws -> [AccessPoint] {
+        try await fetchDevices(config: config, hasRetriedAfterUnauthorized: false)
+    }
+
+    private func fetchDevices(config: ControllerConfig, hasRetriedAfterUnauthorized: Bool) async throws -> [AccessPoint] {
         guard let baseURL = config.baseURL else {
             Logger.network.error("No base URL configured")
-            return []
+            throw UniFiControllerError.invalidConfiguration
         }
 
         Logger.network.info("Fetching devices from \(baseURL.absoluteString)")
@@ -88,10 +110,13 @@ actor UniFiControllerClient {
 
                 // If 401, clear cookies and CSRF token, then retry once
                 if httpResponse.statusCode == 401 {
+                    guard !hasRetriedAfterUnauthorized else {
+                        Logger.network.error("Device request still unauthorized after re-authentication")
+                        throw UniFiControllerError.authenticationFailed
+                    }
                     Logger.network.warning("Got 401 unauthorized, clearing cookies and retrying")
-                    cookiesByConfig[configKey(config)] = nil
-                    csrfTokensByConfig[configKey(config)] = nil
-                    return try await fetchDevices(config: config)
+                    clearAuthentication(for: config)
+                    return try await fetchDevices(config: config, hasRetriedAfterUnauthorized: true)
                 }
 
                 guard (200..<300).contains(httpResponse.statusCode) else {
@@ -186,10 +211,7 @@ actor UniFiControllerClient {
             let jsonString = "{\"username\":\"\(escapeJSON(config.username))\",\"password\":\"\(escapeJSON(config.password))\"}"
             request.httpBody = jsonString.data(using: .utf8)
 
-            // Log the request body for debugging
-            if let bodyData = request.httpBody, let bodyString = String(data: bodyData, encoding: .utf8) {
-                Logger.network.info("Request body: \(bodyString, privacy: .public)")
-            }
+            Logger.network.debug("Request body prepared (credentials redacted)")
 
             do {
                 let (data, response) = try await session(for: config).data(for: request)
@@ -201,14 +223,16 @@ actor UniFiControllerClient {
 
                 Logger.network.info("Login response status code: \(httpResponse.statusCode)")
 
+                if httpResponse.statusCode == 404 {
+                    Logger.network.info("Login path not found, trying next path: \(path)")
+                    continue
+                }
+
                 if !(200..<300).contains(httpResponse.statusCode) {
                     if let dataString = String(data: data, encoding: .utf8) {
                         Logger.network.error("Login failed. Response: \(dataString, privacy: .public)")
                     }
-                    // Log all response headers to debug 403
-                    Logger.network.info("Response headers: \(httpResponse.allHeaderFields, privacy: .public)")
-                    lastError = UniFiControllerError.authenticationFailed
-                    continue
+                    throw classifyLoginFailure(data: data, statusCode: httpResponse.statusCode)
                 }
 
                 // Extract and store cookies
@@ -220,7 +244,7 @@ actor UniFiControllerClient {
 
                     // Extract CSRF token from response header
                     if let csrfToken = headerFields["x-csrf-token"] ?? headerFields["X-Csrf-Token"] {
-                        Logger.network.info("Received CSRF token: \(csrfToken)")
+                        Logger.network.info("Received CSRF token")
                         csrfTokensByConfig[configKey(config)] = csrfToken
                     }
 
@@ -243,69 +267,58 @@ actor UniFiControllerClient {
         return "\(config.baseURL?.absoluteString ?? "")_\(config.username)"
     }
 
-    func toggleLED(config: ControllerConfig, enable: Bool) async throws {
-        guard let baseURL = config.baseURL else { return }
+    private func clearAuthentication(for config: ControllerConfig) {
+        cookiesByConfig[configKey(config)] = nil
+        csrfTokensByConfig[configKey(config)] = nil
+    }
 
-        // Ensure we're logged in first
-        try await ensureAuthenticated(config: config)
+    private func classifyLoginFailure(data: Data, statusCode: Int) -> UniFiControllerError {
+        if statusCode == 429 {
+            Logger.network.error("Login was rate limited with HTTP 429")
+            return .rateLimited
+        }
 
-        // Try newer API path first, then fall back to legacy
-        let ledPaths = [
-            "/proxy/network/api/s/\(config.site)/set/setting/mgmt",
-            "/api/s/\(config.site)/set/setting/mgmt"
-        ]
-
-        var lastError: Error?
-
-        for path in ledPaths {
-            var request = URLRequest(url: baseURL.appendingPathComponent(path))
-            request.httpMethod = "POST"
-            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.httpBody = try JSONEncoder().encode(["led_enabled": enable])
-
-            // Add cookies from authentication
-            if let cookies = cookiesByConfig[configKey(config)] {
-                let cookieHeaders = HTTPCookie.requestHeaderFields(with: cookies)
-                for (key, value) in cookieHeaders {
-                    request.addValue(value, forHTTPHeaderField: key)
-                }
+        if let responseText = String(data: data, encoding: .utf8)?.lowercased() {
+            if responseText.contains("authentication_failed_limit_reached") ||
+                responseText.contains("login attempt limit") {
+                Logger.network.error("Login attempt limit reached")
+                return .rateLimited
             }
 
-            do {
-                let (_, response) = try await session(for: config).data(for: request)
-                guard let httpResponse = response as? HTTPURLResponse else {
-                    lastError = UniFiControllerError.requestFailed
-                    continue
-                }
-
-                // If 404, try next path
-                if httpResponse.statusCode == 404 {
-                    continue
-                }
-
-                // If 401, clear cookies and retry once
-                if httpResponse.statusCode == 401 {
-                    cookiesByConfig[configKey(config)] = nil
-                    return try await toggleLED(config: config, enable: enable)
-                }
-
-                guard (200..<300).contains(httpResponse.statusCode) else {
-                    lastError = UniFiControllerError.requestFailed
-                    continue
-                }
-
-                // Success!
-                return
-            } catch {
-                lastError = error
+            if responseText.contains("invalid username or password") ||
+                responseText.contains("authentication_failed_invalid_credentials") {
+                return .authenticationFailed
             }
         }
 
-        throw lastError ?? UniFiControllerError.requestFailed
+        if statusCode == 401 {
+            return .authenticationFailed
+        }
+
+        return .requestFailed
+    }
+
+    func toggleLED(config: ControllerConfig, enable: Bool) async throws {
+        let devices = try await fetchDevices(config: config)
+
+        guard !devices.isEmpty else {
+            Logger.network.warning("No access points available for bulk LED toggle")
+            return
+        }
+
+        for device in devices {
+            try await toggleDeviceLED(config: config, deviceId: device.deviceId, enable: enable)
+        }
     }
 
     func toggleDeviceLED(config: ControllerConfig, deviceId: String, enable: Bool) async throws {
-        guard let baseURL = config.baseURL else { return }
+        try await toggleDeviceLED(config: config, deviceId: deviceId, enable: enable, hasRetriedAfterUnauthorized: false)
+    }
+
+    private func toggleDeviceLED(config: ControllerConfig, deviceId: String, enable: Bool, hasRetriedAfterUnauthorized: Bool) async throws {
+        guard let baseURL = config.baseURL else {
+            throw UniFiControllerError.invalidConfiguration
+        }
 
         // Ensure we're logged in first
         try await ensureAuthenticated(config: config)
@@ -316,13 +329,14 @@ actor UniFiControllerClient {
             "/api/s/\(config.site)/rest/device/\(deviceId)"
         ]
 
+        let payload = try await deviceLEDUpdatePayload(config: config, deviceId: deviceId, enable: enable)
         var lastError: Error?
 
         for path in devicePaths {
             var request = URLRequest(url: baseURL.appendingPathComponent(path))
             request.httpMethod = "PUT"
             request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.httpBody = try JSONEncoder().encode(["led_override": enable ? "on" : "off"])
+            request.httpBody = try JSONSerialization.data(withJSONObject: payload)
 
             Logger.network.info("Toggling LED for device \(deviceId) to \(enable ? "on" : "off")")
 
@@ -355,9 +369,11 @@ actor UniFiControllerClient {
 
                 // If 401, clear cookies and retry once
                 if httpResponse.statusCode == 401 {
-                    cookiesByConfig[configKey(config)] = nil
-                    csrfTokensByConfig[configKey(config)] = nil
-                    return try await toggleDeviceLED(config: config, deviceId: deviceId, enable: enable)
+                    guard !hasRetriedAfterUnauthorized else {
+                        throw UniFiControllerError.authenticationFailed
+                    }
+                    clearAuthentication(for: config)
+                    return try await toggleDeviceLED(config: config, deviceId: deviceId, enable: enable, hasRetriedAfterUnauthorized: true)
                 }
 
                 if !(200..<300).contains(httpResponse.statusCode) {
@@ -370,6 +386,7 @@ actor UniFiControllerClient {
 
                 // Success!
                 Logger.network.info("Successfully toggled LED for device \(deviceId)")
+                try await verifyDeviceLEDOverride(config: config, deviceId: deviceId, enable: enable)
                 return
             } catch {
                 Logger.network.error("Error toggling device LED: \(error.localizedDescription)")
@@ -378,6 +395,109 @@ actor UniFiControllerClient {
         }
 
         throw lastError ?? UniFiControllerError.requestFailed
+    }
+
+    private func verifyDeviceLEDOverride(config: ControllerConfig, deviceId: String, enable: Bool) async throws {
+        try? await Task.sleep(for: .seconds(1))
+        let deviceConfig = try await fetchRawDeviceConfig(config: config, deviceId: deviceId)
+        let expected = enable ? "on" : "off"
+        let actual = deviceConfig["led_override"] as? String
+
+        guard actual == expected else {
+            Logger.network.error("LED override verification failed for device \(deviceId): expected \(expected), got \(actual ?? "missing")")
+            throw UniFiControllerError.ledStateVerificationFailed
+        }
+
+        Logger.network.info("Verified LED override for device \(deviceId)")
+    }
+
+    private func deviceLEDUpdatePayload(config: ControllerConfig, deviceId: String, enable: Bool) async throws -> [String: Any] {
+        let deviceConfig = try await fetchRawDeviceConfig(config: config, deviceId: deviceId)
+
+        guard deviceConfig["led_override"] != nil else {
+            Logger.network.error("Device \(deviceId) does not expose led_override in its configuration")
+            throw UniFiControllerError.ledControlUnsupported
+        }
+
+        var payload: [String: Any] = ["_id": deviceId]
+        for field in ledUpdateFields {
+            if let value = deviceConfig[field] {
+                payload[field] = value
+            }
+        }
+        payload["led_override"] = enable ? "on" : "off"
+        return payload
+    }
+
+    private func fetchRawDeviceConfig(config: ControllerConfig, deviceId: String, hasRetriedAfterUnauthorized: Bool = false) async throws -> [String: Any] {
+        guard let baseURL = config.baseURL else {
+            throw UniFiControllerError.invalidConfiguration
+        }
+
+        try await ensureAuthenticated(config: config)
+
+        let devicePaths = [
+            "/proxy/network/api/s/\(config.site)/stat/device",
+            "/api/s/\(config.site)/stat/device"
+        ]
+        var lastError: Error?
+
+        for path in devicePaths {
+            var request = URLRequest(url: baseURL.appendingPathComponent(path))
+            request.httpMethod = "GET"
+            addAuthenticationHeaders(to: &request, config: config)
+
+            do {
+                let (data, response) = try await session(for: config).data(for: request)
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    lastError = UniFiControllerError.requestFailed
+                    continue
+                }
+
+                if httpResponse.statusCode == 404 {
+                    continue
+                }
+
+                if httpResponse.statusCode == 401 {
+                    guard !hasRetriedAfterUnauthorized else {
+                        throw UniFiControllerError.authenticationFailed
+                    }
+                    clearAuthentication(for: config)
+                    return try await fetchRawDeviceConfig(config: config, deviceId: deviceId, hasRetriedAfterUnauthorized: true)
+                }
+
+                guard (200..<300).contains(httpResponse.statusCode) else {
+                    lastError = UniFiControllerError.requestFailed
+                    continue
+                }
+
+                guard let envelope = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                      let devices = envelope["data"] as? [[String: Any]] else {
+                    throw UniFiControllerError.requestFailed
+                }
+
+                if let device = devices.first(where: { $0["_id"] as? String == deviceId }) {
+                    return device
+                }
+            } catch {
+                lastError = error
+            }
+        }
+
+        throw lastError ?? UniFiControllerError.requestFailed
+    }
+
+    private func addAuthenticationHeaders(to request: inout URLRequest, config: ControllerConfig) {
+        if let cookies = cookiesByConfig[configKey(config)] {
+            let cookieHeaders = HTTPCookie.requestHeaderFields(with: cookies)
+            for (key, value) in cookieHeaders {
+                request.addValue(value, forHTTPHeaderField: key)
+            }
+        }
+
+        if let csrfToken = csrfTokensByConfig[configKey(config)] {
+            request.addValue(csrfToken, forHTTPHeaderField: "X-Csrf-Token")
+        }
     }
 
     private func session(for config: ControllerConfig) -> URLSession {
@@ -425,8 +545,9 @@ actor UniFiControllerClient {
         }
 
         func toAccessPoint() -> AccessPoint? {
-            // Only return access points (type "uap" or model starting with "U")
-            guard let type = type, type == "uap" || model?.starts(with: "U") == true else {
+            // Only return access points. Some gateways also have model IDs that
+            // start with "U", so the UniFi device type is the safer filter.
+            guard type == "uap" else {
                 return nil
             }
 

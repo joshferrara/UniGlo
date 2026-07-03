@@ -10,11 +10,14 @@ let package = Package(
         .executable(name: "UniFiLEDControllerApp", targets: ["UniFiLEDControllerApp"])
     ],
     dependencies: [
+        .package(url: "https://github.com/sparkle-project/Sparkle", from: "2.7.0")
     ],
     targets: [
         .executableTarget(
             name: "UniFiLEDControllerApp",
-            dependencies: [],
+            dependencies: [
+                .product(name: "Sparkle", package: "Sparkle")
+            ],
             path: "Sources/UniFiLEDControllerApp",
             swiftSettings: [
                 .unsafeFlags(["-parse-as-library"])

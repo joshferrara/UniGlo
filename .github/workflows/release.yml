@@ -1,0 +1,195 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g. 1.0.1)'
+        required: true
+      build_number:
+        description: 'Build number'
+        required: true
+
+jobs:
+  build-and-release:
+    runs-on: macos-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Swift
+        uses: swift-actions/setup-swift@v1
+        with:
+          swift-version: '5.10'
+
+      - name: Resolve dependencies
+        run: swift package resolve
+
+      - name: Validate Release Secrets
+        env:
+          MACOS_CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          SIGNING_IDENTITY: ${{ secrets.SIGNING_IDENTITY }}
+          NOTARIZATION_APPLE_ID: ${{ secrets.NOTARIZATION_APPLE_ID }}
+          NOTARIZATION_TEAM_ID: ${{ secrets.NOTARIZATION_TEAM_ID }}
+          NOTARIZATION_PASSWORD: ${{ secrets.NOTARIZATION_PASSWORD }}
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+          SPARKLE_PUBLIC_ED_KEY: ${{ secrets.SPARKLE_PUBLIC_ED_KEY }}
+        run: |
+          missing=()
+          for name in \
+            MACOS_CERTIFICATE_BASE64 \
+            MACOS_CERTIFICATE_PASSWORD \
+            KEYCHAIN_PASSWORD \
+            SIGNING_IDENTITY \
+            NOTARIZATION_APPLE_ID \
+            NOTARIZATION_TEAM_ID \
+            NOTARIZATION_PASSWORD \
+            SPARKLE_PRIVATE_KEY \
+            SPARKLE_PUBLIC_ED_KEY
+          do
+            if [[ -z "${!name}" ]]; then
+              missing+=("$name")
+            fi
+          done
+
+          if [[ "${#missing[@]}" -gt 0 ]]; then
+            printf 'Missing required release secrets:\n'
+            printf ' - %s\n' "${missing[@]}"
+            exit 1
+          fi
+
+      - name: Import Code Signing Certificate
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.MACOS_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -t 3600 -u build.keychain
+
+          echo "$CERTIFICATE_BASE64" | base64 --decode > certificate.p12
+          security import certificate.p12 -k build.keychain -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          rm certificate.p12
+
+      - name: Extract Version
+        id: version
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "version=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+            echo "build_number=${{ github.event.inputs.build_number }}" >> "$GITHUB_OUTPUT"
+            echo "release_tag=v${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+            echo "release_title=UniGlo v${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+            echo "is_main_build=false" >> "$GITHUB_OUTPUT"
+          elif [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            version="${GITHUB_REF#refs/tags/v}"
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+            echo "build_number=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+            echo "release_tag=v$version" >> "$GITHUB_OUTPUT"
+            echo "release_title=UniGlo v$version" >> "$GITHUB_OUTPUT"
+            echo "is_main_build=false" >> "$GITHUB_OUTPUT"
+          else
+            latest_tag="$(git describe --tags --match 'v[0-9]*' --abbrev=0 2>/dev/null || true)"
+            version="${latest_tag#v}"
+            if [[ -z "$version" ]]; then
+              version="1.0.0"
+            fi
+            short_sha="$(git rev-parse --short HEAD)"
+            echo "version=$version" >> "$GITHUB_OUTPUT"
+            echo "build_number=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+            echo "release_tag=main-${{ github.run_number }}-$short_sha" >> "$GITHUB_OUTPUT"
+            echo "release_title=UniGlo main build ${{ github.run_number }} ($short_sha)" >> "$GITHUB_OUTPUT"
+            echo "is_main_build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set Up Sparkle Private Key
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          printf '%s' "$SPARKLE_PRIVATE_KEY" > "$RUNNER_TEMP/sparkle_private_key"
+          chmod 600 "$RUNNER_TEMP/sparkle_private_key"
+
+      - name: Check Out gh-pages Branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git clone \
+            --branch gh-pages \
+            "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" \
+            "$RUNNER_TEMP/gh-pages"
+
+      - name: Build, Sign, Notarize, and Generate Appcast
+        env:
+          APP_VERSION: ${{ steps.version.outputs.version }}
+          APP_BUILD: ${{ steps.version.outputs.build_number }}
+          SPARKLE_FEED_PATH: ${{ runner.temp }}/gh-pages
+          SPARKLE_PRIVATE_KEY_FILE: ${{ runner.temp }}/sparkle_private_key
+          SPARKLE_PUBLIC_ED_KEY: ${{ secrets.SPARKLE_PUBLIC_ED_KEY }}
+          DEVELOPER_ID_APP_CERT: ${{ secrets.SIGNING_IDENTITY }}
+          TEAM_ID: ${{ secrets.NOTARIZATION_TEAM_ID }}
+          NOTARIZATION_APPLE_ID: ${{ secrets.NOTARIZATION_APPLE_ID }}
+          NOTARIZATION_PASSWORD: ${{ secrets.NOTARIZATION_PASSWORD }}
+          GITHUB_REPOSITORY_SLUG: ${{ github.repository }}
+          GITHUB_RELEASE_TAG: ${{ steps.version.outputs.release_tag }}
+        run: ./scripts/release.sh
+
+      - name: Create or Update GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+          RELEASE_TAG: ${{ steps.version.outputs.release_tag }}
+          RELEASE_TITLE: ${{ steps.version.outputs.release_title }}
+          IS_MAIN_BUILD: ${{ steps.version.outputs.is_main_build }}
+        run: |
+          if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            release_flags=()
+            if [[ "$IS_MAIN_BUILD" == "true" ]]; then
+              release_flags+=(--prerelease)
+            fi
+
+            gh release create "$RELEASE_TAG" \
+              --target "$GITHUB_SHA" \
+              --title "$RELEASE_TITLE" \
+              --notes "Automated UniGlo build for ${GITHUB_SHA}." \
+              "${release_flags[@]}"
+          fi
+
+          while IFS= read -r asset; do
+            [[ -n "$asset" ]] || continue
+            gh release upload "$RELEASE_TAG" "$RUNNER_TEMP/gh-pages/releases/$asset" --clobber
+          done < dist/release-assets.txt
+
+      - name: Publish gh-pages Updates
+        env:
+          RELEASE_TAG: ${{ steps.version.outputs.release_tag }}
+        run: |
+          cd "$RUNNER_TEMP/gh-pages"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add appcast.xml releases
+
+          if ! git diff --cached --quiet; then
+            git commit -m "Update appcast for ${RELEASE_TAG}"
+            git push origin gh-pages
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: |
+          rm -f "$RUNNER_TEMP/sparkle_private_key"
+          security delete-keychain build.keychain || true

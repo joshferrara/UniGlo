@@ -2,20 +2,19 @@ import Foundation
 import AppKit
 import OSLog
 
+@MainActor
 final class SchedulerService {
     private var timers: [UUID: DispatchSourceTimer] = [:]
     private weak var appState: AppState?
     private var observers: [NSObjectProtocol] = []
 
-    @MainActor
     func configure(with appState: AppState) {
         self.appState = appState
-        Task { await self.rebuildTimers() }
+        rebuildTimers()
         subscribeToNotifications()
     }
 
-    @MainActor
-    func rebuildTimers() async {
+    func rebuildTimers() {
         cancelAll()
         guard let appState else { return }
 
@@ -138,12 +137,14 @@ final class SchedulerService {
 
         guard !assignedDevices.isEmpty else {
             Logger.app.warning("Schedule '\(schedule.name)' has no assigned devices (assigned MACs: \(schedule.assignments.joined(separator: ", ")))")
+            appState.setStatus(.warning, "Schedule '\(schedule.name)' was skipped because its assigned access points are not loaded.")
             return
         }
 
         Logger.app.info("Found \(assignedDevices.count) devices matching assignment: \(assignedDevices.map { $0.name }.joined(separator: ", "))")
 
         // Toggle LED for each assigned device
+        var failedDeviceNames: [String] = []
         for device in assignedDevices {
             do {
                 try await appState.controllerClient.toggleDeviceLED(
@@ -153,22 +154,27 @@ final class SchedulerService {
                 )
                 Logger.app.info("Successfully toggled LED \(enable ? "ON" : "OFF") for device: \(device.name)")
             } catch {
+                failedDeviceNames.append(device.name)
                 Logger.app.error("Failed to toggle LED for device \(device.name): \(error.localizedDescription)")
             }
         }
 
         // Refresh device states after changes
         await appState.refreshDevices()
-    }
 
-    deinit {
-        Task { @MainActor in
-            cancelAll()
-            removeObservers()
+        if !failedDeviceNames.isEmpty {
+            appState.setStatus(.error, "Schedule '\(schedule.name)' failed for \(failedDeviceNames.joined(separator: ", ")).")
         }
     }
 
-    @MainActor
+    deinit {
+        timers.values.forEach { timer in
+            timer.setEventHandler { }
+            timer.cancel()
+        }
+        observers.forEach { NSWorkspace.shared.notificationCenter.removeObserver($0) }
+    }
+
     private func cancelAll() {
         timers.values.forEach { timer in
             timer.setEventHandler { }
@@ -177,27 +183,23 @@ final class SchedulerService {
         timers.removeAll()
     }
 
-    @MainActor
     private func subscribeToNotifications() {
         guard observers.isEmpty else { return }
 
         let center = NSWorkspace.shared.notificationCenter
         let wakeObserver = center.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: nil) { [weak self] _ in
-            Task { await self?.rebuildTimers() }
+            Task { @MainActor in
+                self?.rebuildTimers()
+            }
         }
         let screenObserver = center.addObserver(forName: NSWorkspace.screensDidWakeNotification, object: nil, queue: nil) { [weak self] _ in
-            Task { await self?.rebuildTimers() }
+            Task { @MainActor in
+                self?.rebuildTimers()
+            }
         }
         observers.append(contentsOf: [wakeObserver, screenObserver])
     }
 
-    @MainActor
-    private func removeObservers() {
-        guard !observers.isEmpty else { return }
-        let center = NSWorkspace.shared.notificationCenter
-        observers.forEach { center.removeObserver($0) }
-        observers.removeAll()
-    }
 }
 
 // Extension to convert DayOfWeek to Calendar weekday

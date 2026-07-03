@@ -3,6 +3,7 @@ import SwiftUI
 struct SchedulesView: View {
     @EnvironmentObject private var appState: AppState
     @State private var scheduleToEdit: Schedule?
+    @State private var scheduleToDelete: Schedule?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -54,13 +55,7 @@ struct SchedulesView: View {
                                     scheduleToEdit = schedule
                                 },
                                 onDelete: {
-                                    if let index = appState.schedules.firstIndex(where: { $0.id == schedule.id }) {
-                                        appState.schedules.remove(at: index)
-                                        appState.saveState()
-                                        Task {
-                                            await appState.scheduler.rebuildTimers()
-                                        }
-                                    }
+                                    scheduleToDelete = schedule
                                 }
                             )
 
@@ -73,6 +68,25 @@ struct SchedulesView: View {
                 }
             }
         }
+        .confirmationDialog(
+            "Delete Schedule?",
+            isPresented: deleteConfirmationPresented,
+            titleVisibility: .visible
+        ) {
+            Button("Delete Schedule", role: .destructive) {
+                if let schedule = scheduleToDelete {
+                    delete(schedule)
+                }
+                scheduleToDelete = nil
+            }
+            Button("Cancel", role: .cancel) {
+                scheduleToDelete = nil
+            }
+        } message: {
+            if let schedule = scheduleToDelete {
+                Text("This will permanently delete \"\(schedule.name)\".")
+            }
+        }
         .sheet(item: $scheduleToEdit) { schedule in
             ScheduleEditor(schedule: schedule) { updated in
                 if let index = appState.schedules.firstIndex(where: { $0.id == updated.id }) {
@@ -80,14 +94,34 @@ struct SchedulesView: View {
                 } else {
                     appState.schedules.append(updated)
                 }
-                appState.saveState()
+                _ = appState.saveState()
                 scheduleToEdit = nil
 
                 // Rebuild scheduler timers after schedule changes
-                Task {
-                    await appState.scheduler.rebuildTimers()
+                Task { @MainActor in
+                    appState.scheduler.rebuildTimers()
                 }
             }
+        }
+    }
+
+    private var deleteConfirmationPresented: Binding<Bool> {
+        Binding(
+            get: { scheduleToDelete != nil },
+            set: { isPresented in
+                if !isPresented {
+                    scheduleToDelete = nil
+                }
+            }
+        )
+    }
+
+    private func delete(_ schedule: Schedule) {
+        guard let index = appState.schedules.firstIndex(where: { $0.id == schedule.id }) else { return }
+        appState.schedules.remove(at: index)
+        _ = appState.saveState()
+        Task { @MainActor in
+            appState.scheduler.rebuildTimers()
         }
     }
 
@@ -97,11 +131,11 @@ struct SchedulesView: View {
             set: { newValue in
                 guard let index = appState.schedules.firstIndex(where: { $0.id == schedule.id }) else { return }
                 appState.schedules[index].enabled = newValue
-                appState.saveState()
+                _ = appState.saveState()
 
                 // Rebuild scheduler timers when enabling/disabling schedules
-                Task {
-                    await appState.scheduler.rebuildTimers()
+                Task { @MainActor in
+                    appState.scheduler.rebuildTimers()
                 }
             }
         )
@@ -257,7 +291,7 @@ struct ScheduleEditor: View {
                         }
 
                         if appState.devices.isEmpty {
-                            Text("No access points available. Add devices in Settings.")
+                            Text("No access points available. Configure Settings, then refresh Devices.")
                                 .foregroundColor(.secondary)
                                 .font(.callout)
                                 .padding(12)
@@ -427,6 +461,12 @@ struct ScheduleEditor: View {
 
             // Footer with action buttons
             HStack(spacing: 12) {
+                if let validationMessage {
+                    Text(validationMessage)
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                }
+
                 Spacer()
                 Button("Cancel") {
                     dismiss()
@@ -435,18 +475,36 @@ struct ScheduleEditor: View {
                 .buttonStyle(.bordered)
 
                 Button("Save Schedule") {
+                    schedule.name = trimmedScheduleName
                     onSave(schedule)
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.borderedProminent)
                 .tint(Color.unigloBlue)
+                .disabled(validationMessage != nil)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
             .background(Color(NSColor.controlBackgroundColor))
         }
         .frame(minWidth: 550, idealWidth: 600, minHeight: 500, idealHeight: 600)
+    }
+
+    private var trimmedScheduleName: String {
+        schedule.name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var validationMessage: String? {
+        if trimmedScheduleName.isEmpty {
+            return "Name is required."
+        }
+
+        if schedule.rules.isEmpty {
+            return "Add at least one rule."
+        }
+
+        return nil
     }
 
     private func bindingForDevice(_ macAddress: String) -> Binding<Bool> {

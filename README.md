@@ -42,7 +42,7 @@ UniGlo is a native macOS application that gives you complete control over the LE
 
 ## Screenshots
 
-> Add screenshots here of the main interface, device list, and schedule configuration
+Screenshots are pending for the device list, schedule editor, and settings flow.
 
 ## Requirements
 
@@ -61,7 +61,7 @@ UniGlo is a native macOS application that gives you complete control over the LE
 ### Build from Source
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/UniGlo.git
+git clone https://github.com/joshferrara/UniGlo.git
 cd UniGlo
 
 # Build the application
@@ -79,14 +79,14 @@ cd UniGlo
    - Controller URL (e.g., `https://192.168.1.1:8443`)
    - Username
    - Password
-4. Enable "Accept Self-Signed Certificates" if using a local controller
-5. Click **Save Settings**
+4. Enable **Accept Invalid SSL Certificates** if using a local controller with a self-signed certificate
+5. Click **Save & Refresh**
 
 ### Managing Devices
 1. Navigate to the **Devices** tab
 2. Click **Refresh** to load your access points
 3. Use the toggle switches to control individual LEDs
-4. Use **Turn On All LEDs** or **Turn Off All LEDs** for bulk control
+4. Use **All On** or **All Off** for bulk control
 
 ### Creating Schedules
 1. Go to the **Schedules** tab
@@ -109,7 +109,7 @@ UniGlo is built with modern Swift and SwiftUI:
 - **Sparkle**: Automatic update framework
 - **Keychain Services**: Secure credential storage
 - **URLSession**: Network communication with UniFi Controller
-- **UserDefaults & Core Data**: Local data persistence
+- **JSON files & Keychain Services**: Local settings, schedules, and secure password persistence
 
 ### Project Structure
 ```
@@ -142,6 +142,11 @@ swift test
 # Build distributable app
 ./build_app.sh
 ```
+
+### Sparkle Releases
+
+For a GitHub Pages + GitHub Releases Sparkle setup similar to `Hardlinker`, see
+[SPARKLE_GITHUB_PAGES_SETUP.md](SPARKLE_GITHUB_PAGES_SETUP.md).
 
 ### Contributing
 Contributions are welcome! Please feel free to submit a Pull Request.

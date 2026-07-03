@@ -48,7 +48,7 @@ struct ControllerConfig: Codable {
 }
 
 struct AccessPoint: Codable, Identifiable {
-    let id: UUID
+    var id: String { deviceId }
     var deviceId: String  // UniFi device ID for API calls
     var name: String
     var ipAddress: String
@@ -58,8 +58,7 @@ struct AccessPoint: Codable, Identifiable {
     var tags: [String]
     var isOnline: Bool
 
-    init(id: UUID = UUID(), deviceId: String, name: String, ipAddress: String, macAddress: String, ledEnabled: Bool, lastSeen: Date, tags: [String] = [], isOnline: Bool = true) {
-        self.id = id
+    init(deviceId: String, name: String, ipAddress: String, macAddress: String, ledEnabled: Bool, lastSeen: Date, tags: [String] = [], isOnline: Bool = true) {
         self.deviceId = deviceId
         self.name = name
         self.ipAddress = ipAddress

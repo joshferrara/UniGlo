@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct MainView: View {
+    @EnvironmentObject private var sparkleUpdater: SparkleUpdater
+
     var body: some View {
         TabView {
             DevicesView()
@@ -14,6 +16,7 @@ struct MainView: View {
                 }
 
             SettingsView()
+                .environmentObject(sparkleUpdater)
                 .tabItem {
                     Text("Settings")
                 }

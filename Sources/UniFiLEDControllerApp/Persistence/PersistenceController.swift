@@ -26,14 +26,20 @@ final class PersistenceController {
 
         // Save password to Keychain if username is provided
         if !controllerConfig.username.isEmpty {
-            let account = keychainAccount(for: controllerConfig)
+            let accounts = keychainAccounts(for: controllerConfig)
+            let account = accounts[0]
             if !controllerConfig.password.isEmpty {
                 try KeychainHelper.shared.savePassword(controllerConfig.password, for: account)
+                for legacyAccount in accounts.dropFirst() {
+                    try? KeychainHelper.shared.deletePassword(for: legacyAccount)
+                }
                 Logger.app.info("Saved password to Keychain for account: \(account)")
             } else {
                 // If password is empty, delete from Keychain
-                try? KeychainHelper.shared.deletePassword(for: account)
-                Logger.app.info("Deleted password from Keychain for account: \(account)")
+                for account in accounts {
+                    try? KeychainHelper.shared.deletePassword(for: account)
+                }
+                Logger.app.info("Deleted password from Keychain for username: \(controllerConfig.username)")
             }
         }
     }
@@ -48,22 +54,54 @@ final class PersistenceController {
 
         // Load password from Keychain
         if !config.username.isEmpty {
-            let account = keychainAccount(for: config)
-            if let password = try? KeychainHelper.shared.getPassword(for: account) {
-                config.password = password
-                Logger.app.info("Loaded password from Keychain for account: \(account)")
-            } else {
-                Logger.app.info("No password found in Keychain for account: \(account)")
+            let accounts = keychainAccounts(for: config)
+            for account in accounts {
+                if let password = try KeychainHelper.shared.getPassword(for: account) {
+                    config.password = password
+
+                    if account != accounts[0] {
+                        try? KeychainHelper.shared.savePassword(password, for: accounts[0])
+                        try? KeychainHelper.shared.deletePassword(for: account)
+                        Logger.app.info("Migrated password to normalized Keychain account: \(accounts[0])")
+                    }
+
+                    Logger.app.info("Loaded password from Keychain for account: \(account)")
+                    break
+                }
+            }
+
+            if config.password.isEmpty {
+                Logger.app.info("No password found in Keychain for username: \(config.username)")
             }
         }
 
         return config
     }
 
-    /// Generate a unique Keychain account identifier based on the controller URL and username
-    private func keychainAccount(for config: ControllerConfig) -> String {
-        let baseURLString = config.baseURL?.absoluteString ?? "default"
-        return "\(baseURLString):\(config.username)"
+    /// Generate normalized and legacy Keychain account identifiers based on the controller URL and username.
+    private func keychainAccounts(for config: ControllerConfig) -> [String] {
+        let variants = baseURLKeyVariants(for: config.baseURL)
+        return variants.map { "\($0):\(config.username)" }
+    }
+
+    private func baseURLKeyVariants(for baseURL: URL?) -> [String] {
+        guard let baseURL else {
+            return ["default"]
+        }
+
+        let raw = baseURL.absoluteString
+        let trimmed = raw.hasSuffix("/") ? String(raw.dropLast()) : raw
+        let withTrailingSlash = trimmed + "/"
+
+        var variants = [trimmed]
+        if raw != trimmed {
+            variants.append(raw)
+        }
+        if !variants.contains(withTrailingSlash) {
+            variants.append(withTrailingSlash)
+        }
+
+        return variants
     }
 
     func save(schedules: [Schedule]) throws {

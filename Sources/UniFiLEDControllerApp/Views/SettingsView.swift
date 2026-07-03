@@ -2,9 +2,11 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var sparkleUpdater: SparkleUpdater
     @State private var configDraft: ControllerConfig = .init()
     @State private var baseURLText: String = ""
     @State private var isPersisting = false
+    @State private var hasAppeared = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -23,6 +25,14 @@ struct SettingsView: View {
             .padding(.bottom, 16)
 
             Divider()
+
+            if let banner = appState.statusBanner {
+                StatusBannerView(banner: banner) {
+                    appState.clearStatusBanner()
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+            }
 
             // Content
             ScrollView {
@@ -60,11 +70,7 @@ struct SettingsView: View {
                     }
                     .padding(16)
                     .frame(maxWidth: 500)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(.white)
-                            .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
-                    )
+                    .background(cardBackground)
 
                     // Controller Connection Card
                     VStack(alignment: .leading, spacing: 16) {
@@ -126,11 +132,7 @@ struct SettingsView: View {
                     }
                     .padding(16)
                     .frame(maxWidth: 500)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(.white)
-                            .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
-                    )
+                    .background(cardBackground)
 
                     // Credentials Card
                     VStack(alignment: .leading, spacing: 16) {
@@ -192,11 +194,7 @@ struct SettingsView: View {
                     }
                     .padding(16)
                     .frame(maxWidth: 500)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(.white)
-                            .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
-                    )
+                    .background(cardBackground)
 
                     // Security Section
                     VStack(alignment: .leading, spacing: 12) {
@@ -219,11 +217,7 @@ struct SettingsView: View {
                     }
                     .padding(16)
                     .frame(maxWidth: 500)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(.white)
-                            .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
-                    )
+                    .background(cardBackground)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(20)
@@ -236,7 +230,7 @@ struct SettingsView: View {
                 if isPersisting {
                     ProgressView()
                         .controlSize(.small)
-                    Text("Connecting...")
+                    Text("Saving & refreshing...")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -248,16 +242,34 @@ struct SettingsView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(Color.unigloBlue)
-                .disabled(isPersisting || baseURLText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || configDraft.username.isEmpty || configDraft.password.isEmpty)
+                .disabled(isPersisting || !canSave)
+
+                Button("Check for Updates…") {
+                    sparkleUpdater.checkForUpdates(nil)
+                }
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 16)
             .background(Color(NSColor.controlBackgroundColor))
         }
         .onAppear {
+            guard !hasAppeared else { return }
+            hasAppeared = true
             configDraft = appState.controllerConfig
             baseURLText = appState.controllerConfig.baseURL?.absoluteString ?? ""
         }
+    }
+
+    private var cardBackground: some View {
+        RoundedRectangle(cornerRadius: 8)
+            .fill(Color(NSColor.controlBackgroundColor))
+            .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
+    }
+
+    private var canSave: Bool {
+        !baseURLText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !configDraft.username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !configDraft.password.isEmpty
     }
 
     private func persist() {
@@ -276,10 +288,28 @@ struct SettingsView: View {
         } else {
             normalizedURL = "https://" + collapsedURL
         }
-        configDraft.baseURL = normalizedURL.flatMap { URL(string: $0) }
-        configDraft.site = configDraft.site.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        guard let normalizedURL,
+              let url = URL(string: normalizedURL),
+              let scheme = url.scheme?.lowercased(),
+              ["http", "https"].contains(scheme),
+              url.host != nil else {
+            appState.setStatus(.error, "Enter a valid controller URL, such as https://192.168.1.1:8443.")
+            isPersisting = false
+            return
+        }
+
+        configDraft.baseURL = url
+        baseURLText = url.absoluteString
+        let trimmedSite = configDraft.site.trimmingCharacters(in: .whitespacesAndNewlines)
+        configDraft.site = trimmedSite.isEmpty ? "default" : trimmedSite
+        configDraft.username = configDraft.username.trimmingCharacters(in: .whitespacesAndNewlines)
         appState.controllerConfig = configDraft
-        appState.saveState()
+        guard appState.saveState() else {
+            isPersisting = false
+            return
+        }
+
         Task {
             await appState.refreshDevices()
             await MainActor.run { isPersisting = false }

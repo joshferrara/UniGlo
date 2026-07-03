@@ -50,6 +50,9 @@ build/
 *.temp
 *.log
 cookies.txt
+dist/
+sparkle_private_key
+sparkle_private_key*
 
 # IDE files
 .vscode/
