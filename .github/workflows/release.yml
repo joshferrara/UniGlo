@@ -144,7 +144,7 @@ jobs:
           NOTARIZATION_PASSWORD: ${{ secrets.NOTARIZATION_PASSWORD }}
           GITHUB_REPOSITORY_SLUG: ${{ github.repository }}
           GITHUB_RELEASE_TAG: ${{ steps.version.outputs.release_tag }}
-        run: ./scripts/release.sh
+        run: bash ./scripts/release.sh
 
       - name: Create or Update GitHub Release
         env:
