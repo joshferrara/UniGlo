@@ -2,7 +2,7 @@
 
 This project can use the same public Sparkle layout as `Hardlinker`:
 
-- GitHub Pages hosts the feed at `https://<owner>.github.io/<repo>/appcast.xml`
+- GitHub Pages hosts the feed. UniGlo currently uses `https://joshferrara.com/UniGlo/appcast.xml`.
 - GitHub Releases hosts the actual `.zip` update archives and `.delta` files
 - The `gh-pages` branch keeps a local `releases/` cache so `generate_appcast` can build deltas across versions
 
@@ -70,7 +70,7 @@ git worktree add ../UniGlo-gh-pages gh-pages
 Example:
 
 ```bash
-export SPARKLE_FEED_URL="https://joshferrara.github.io/UniGlo/appcast.xml"
+export SPARKLE_FEED_URL="https://joshferrara.com/UniGlo/appcast.xml"
 ```
 
 4. Put the matching public key into the release environment:
@@ -140,8 +140,8 @@ git push origin gh-pages
 ## Verify the feed
 
 ```bash
-curl -I https://joshferrara.github.io/UniGlo/appcast.xml
-curl https://joshferrara.github.io/UniGlo/appcast.xml | head
+curl -I https://joshferrara.com/UniGlo/appcast.xml
+curl https://joshferrara.com/UniGlo/appcast.xml | head
 ```
 
 Then install an older copy of UniGlo and run `Check for Updates…`.

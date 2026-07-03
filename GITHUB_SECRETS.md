@@ -83,7 +83,7 @@ release tag.
 
 1. Add all secrets.
 2. Push to `main` or run the workflow manually with a throwaway version.
-4. Confirm these exist afterward:
+3. Confirm these exist afterward:
    - GitHub release assets
-   - `https://joshferrara.github.io/UniGlo/appcast.xml`
+   - `https://joshferrara.com/UniGlo/appcast.xml`
    - updated `gh-pages/releases/` cache

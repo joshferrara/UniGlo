@@ -135,6 +135,7 @@ jobs:
         env:
           APP_VERSION: ${{ steps.version.outputs.version }}
           APP_BUILD: ${{ steps.version.outputs.build_number }}
+          SPARKLE_FEED_URL: https://joshferrara.com/UniGlo/appcast.xml
           SPARKLE_FEED_PATH: ${{ runner.temp }}/gh-pages
           SPARKLE_PRIVATE_KEY_FILE: ${{ runner.temp }}/sparkle_private_key
           SPARKLE_PUBLIC_ED_KEY: ${{ secrets.SPARKLE_PUBLIC_ED_KEY }}
