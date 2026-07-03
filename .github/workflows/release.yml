@@ -2,8 +2,6 @@ name: Build and Release
 
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*'
   workflow_dispatch:
@@ -93,26 +91,12 @@ jobs:
             echo "build_number=${{ github.event.inputs.build_number }}" >> "$GITHUB_OUTPUT"
             echo "release_tag=v${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
             echo "release_title=UniGlo v${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
-            echo "is_main_build=false" >> "$GITHUB_OUTPUT"
           elif [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
             version="${GITHUB_REF#refs/tags/v}"
             echo "version=$version" >> "$GITHUB_OUTPUT"
             echo "build_number=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
             echo "release_tag=v$version" >> "$GITHUB_OUTPUT"
             echo "release_title=UniGlo v$version" >> "$GITHUB_OUTPUT"
-            echo "is_main_build=false" >> "$GITHUB_OUTPUT"
-          else
-            latest_tag="$(git describe --tags --match 'v[0-9]*' --abbrev=0 2>/dev/null || true)"
-            version="${latest_tag#v}"
-            if [[ -z "$version" ]]; then
-              version="1.0.0"
-            fi
-            short_sha="$(git rev-parse --short HEAD)"
-            echo "version=$version" >> "$GITHUB_OUTPUT"
-            echo "build_number=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
-            echo "release_tag=main-${{ github.run_number }}-$short_sha" >> "$GITHUB_OUTPUT"
-            echo "release_title=UniGlo main build ${{ github.run_number }} ($short_sha)" >> "$GITHUB_OUTPUT"
-            echo "is_main_build=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Set Up Sparkle Private Key
@@ -153,19 +137,12 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
           RELEASE_TAG: ${{ steps.version.outputs.release_tag }}
           RELEASE_TITLE: ${{ steps.version.outputs.release_title }}
-          IS_MAIN_BUILD: ${{ steps.version.outputs.is_main_build }}
         run: |
           if ! gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
-            release_flags=()
-            if [[ "$IS_MAIN_BUILD" == "true" ]]; then
-              release_flags+=(--prerelease)
-            fi
-
             gh release create "$RELEASE_TAG" \
               --target "$GITHUB_SHA" \
               --title "$RELEASE_TITLE" \
-              --notes "Automated UniGlo build for ${GITHUB_SHA}." \
-              "${release_flags[@]}"
+              --notes "Automated UniGlo release for ${GITHUB_SHA}."
           fi
 
           while IFS= read -r asset; do

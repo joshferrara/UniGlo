@@ -123,6 +123,7 @@ cp "$ARCHIVE_PATH" "$ARCHIVES_DIR/"
 "$GENERATE_APPCAST_BIN" \
     --ed-key-file "$SPARKLE_PRIVATE_KEY_FILE" \
     --download-url-prefix "$GITHUB_RELEASES_URL_PREFIX" \
+    --maximum-versions 1 \
     "$ARCHIVES_DIR"
 
 cp "$ARCHIVES_DIR/appcast.xml" "$GH_PAGES_DIR/appcast.xml"

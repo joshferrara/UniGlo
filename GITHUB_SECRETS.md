@@ -54,7 +54,7 @@ The matching Sparkle EdDSA public key that goes into the app bundle.
 
 The workflow in
 [`.github/workflows/release.yml`](.github/workflows/release.yml)
-does this on every push to `main`, on release tags, or on manual dispatch:
+does this on `v*` release tags or manual dispatch:
 
 1. Imports your signing certificate into a temporary keychain.
 2. Checks out the `gh-pages` branch into a temp directory.
@@ -67,11 +67,9 @@ does this on every push to `main`, on release tags, or on manual dispatch:
 5. Uploads the generated `.zip` and `.delta` assets listed in `dist/release-assets.txt`.
 6. Commits and pushes the updated `gh-pages` feed.
 
-For normal `main` pushes, the workflow uses the latest `v*` tag as the display
-version, the GitHub run number as the Sparkle build number, and a unique
-`main-<run>-<sha>` prerelease tag for the downloadable assets. This gives
-Sparkle a fresh build on every `main` update without requiring a hand-created
-release tag.
+Tag pushes use the tag value as the display version and the GitHub run number
+as the Sparkle build number. Manual dispatch can create the same release flow by
+supplying an explicit version and build number.
 
 ## Expected repository setup
 
@@ -82,7 +80,7 @@ release tag.
 ## Recommended first test
 
 1. Add all secrets.
-2. Push to `main` or run the workflow manually with a throwaway version.
+2. Push a `v*` tag or run the workflow manually with a throwaway version.
 3. Confirm these exist afterward:
    - GitHub release assets
    - `https://joshferrara.com/UniGlo/appcast.xml`

@@ -105,13 +105,12 @@ This produces:
 
 ## Publish the release
 
-The GitHub Actions workflow handles this automatically on pushes to `main`,
-release tags, and manual workflow dispatches.
+The GitHub Actions workflow handles this automatically on `v*` release tags and
+manual workflow dispatches.
 
-For `main` pushes, the workflow creates a unique prerelease tag named
-`main-<run>-<sha>` and points the appcast entry at that GitHub Release. For
-stable releases, push a `v<version>` tag or run the workflow manually with the
-desired version and build number.
+UniGlo follows the same release flow as `Hardlinker`: ordinary pushes to `main`
+do not publish a GitHub Release. To publish, push a `v<version>` tag or run the
+workflow manually with the desired version and build number.
 
 Manual local publishing works like this:
 
@@ -152,6 +151,7 @@ Then install an older copy of UniGlo and run `Check for Updates…`.
   download location.
 - The public appcast entries point at GitHub Release assets, matching the
   `Hardlinker` setup.
-- Every `main` push can become an update because Sparkle compares the build
-  number generated from the GitHub run number.
+- Sparkle compares the build number generated from the GitHub run number, so a
+  tagged release with the same marketing version can still supersede an older
+  build.
 - Keep the private Sparkle key out of git.
