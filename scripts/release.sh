@@ -121,7 +121,6 @@ touch "$MARKER_PATH"
 cp "$ARCHIVE_PATH" "$ARCHIVES_DIR/"
 
 "$GENERATE_APPCAST_BIN" \
-    --include-deltas \
     --ed-key-file "$SPARKLE_PRIVATE_KEY_FILE" \
     --download-url-prefix "$GITHUB_RELEASES_URL_PREFIX" \
     "$ARCHIVES_DIR"
